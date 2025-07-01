@@ -134,3 +134,205 @@ public class BadThreadMain {
 - **start() 메서드**: JVM이 새로운 스레드를 생성하고 해당 스레드에서 run() 메서드를 호출
 - **run() 메서드**: 단순한 메서드 호출로, 현재 스레드에서 직접 실행
 - 스레드의 진정한 활용을 위해서는 반드시 **start() 메서드를 사용**해야 함
+
+---
+
+# 👻 데몬 스레드 (Daemon Thread)
+
+## 예제 코드
+
+### DaemonThreadMain.java
+```java
+package lesson01.start;
+
+public class DaemonThreadMain {
+    public static void main(String[] args) {
+        Thread nowThread = Thread.currentThread();
+        System.out.println("main() start " + nowThread.getName());
+
+        DaemonThread daemonThread = new DaemonThread();
+        daemonThread.setDaemon(true); // 데몬스레드 여부 설정
+        daemonThread.start();
+
+        System.out.println("main() end " + nowThread.getName());
+    }
+
+    static class DaemonThread extends Thread {
+        @Override
+        public void run() {
+            System.out.println("Hello Daemon Thread : START" + Thread.currentThread().getName());
+
+            try {
+                Thread.sleep(10000); // 10초간 실행
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            System.out.println("Hello Daemon Thread : END " + Thread.currentThread().getName());
+        }
+    }
+}
+```
+
+## 🔍 데몬 스레드 개념
+
+스레드는 **사용자 스레드**와 **데몬 스레드** 2가지 종류로 구분됩니다.
+
+### 👤 사용자 스레드 (User Thread)
+- 프로그램의 **주요 작업을 수행**
+- 작업이 완료될 때까지 실행
+- **모든 사용자 스레드가 종료되면 JVM도 종료**
+
+### 👻 데몬 스레드 (Daemon Thread)
+- **백그라운드에서 보조적인 작업을 수행**
+- 모든 사용자 스레드가 종료되면 **데몬 스레드는 자동으로 종료**
+- 예: 가비지 컴팩터, 로그 처리, 모니터링 등
+
+## 🔄 실행 결과 분석
+
+### 데몬 스레드 설정 시
+```
+main() start main
+Hello Daemon Thread : START Thread-0
+main() end main
+// 프로그램 즉시 종료 (10초를 기다리지 않음)
+```
+
+### 일반 스레드 설정 시
+```
+main() start main
+Hello Daemon Thread : START Thread-0
+main() end main
+// 10초 대기 후...
+Hello Daemon Thread : END Thread-0
+// 프로그램 종료
+```
+
+## ⚙️ 데몬 스레드 설정 방법
+
+```java
+Thread thread = new Thread();
+thread.setDaemon(true);  // 데몬 스레드로 설정
+thread.start();          // start() 호출 전에 설정해야 함
+```
+
+## 🤔 왜 데몬 스레드가 함께 종료될까?
+
+### 프로그램 생명주기 관점
+- **사용자 스레드 = 프로그램의 주체**
+- 모든 사용자 스레드 종료 = 프로그램의 주요 작업 완료
+- JVM: "프로그램이 끝났으니 종료하자!"
+
+### 데몬 스레드의 본질
+```java
+// 만약 데몬 스레드가 계속 살아있다면?
+public static void main(String[] args) {
+    System.out.println("메인 작업 완료");
+    // 프로그램이 끝났는데...
+}
+// 데몬 스레드가 계속 실행 중... 🤷‍♂️
+// → 프로그램이 언제 끝날지 모름!
+```
+
+### 실제 사례
+- **웹서버 종료** → 로그 처리 스레드도 불필요
+- **게임 종료** → 백그라운드 음악 스레드도 불필요
+- **데이터베이스 연결 종료** → 모니터링 스레드도 불필요
+
+### 핵심 포인트
+- 데몬 스레드는 **"주인(사용자 스레드)을 따라다니는 하인"**
+- 주인이 없으면 하인도 존재할 이유가 없음
+- **프로그램의 깔끔한 종료**를 위한 자바의 설계 철학
+
+## ⚠️ 주의사항
+- `setDaemon(true)`는 **반드시 `start()` 호출 전에** 설정해야 함
+- 데몬 스레드는 예상치 못하게 종료될 수 있으므로 **중요한 작업에는 사용 금지**
+- 주로 **보조적인 작업**(모니터링, 로깅, 청소 작업 등)에 사용
+
+---
+
+# 🌱 스프링부트 Executor 스레드
+
+## 📝 결론: 데몬 스레드가 아닙니다!
+
+스프링부트의 Executor 스레드들은 **사용자 스레드**입니다.
+
+## 🔍 스프링부트 스레드 구조
+
+```java
+// 스프링부트 내부적으로 이런 식으로 동작
+@Async
+public void asyncMethod() {
+    // 이 메서드는 TaskExecutor의 스레드풀에서 실행
+    // 이 스레드들은 사용자 스레드!
+}
+```
+
+## 🤔 왜 사용자 스레드일까?
+
+### 1. 웹 요청 처리
+- HTTP 요청을 처리하는 것은 **주요 작업**
+- 서버의 핵심 기능
+
+### 2. 비즈니스 로직 실행
+- @Async로 실행되는 작업들도 **핵심 기능**
+- 데이터 처리, 이메일 발송 등
+
+### 3. 서버의 생명 유지
+- 웹서버가 살아있어야 하므로 스레드들이 계속 대기
+
+## 📊 실제 확인해보기
+
+```java
+@RestController
+public class TestController {
+    
+    @Async
+    @GetMapping("/test")
+    public void asyncTest() {
+        Thread currentThread = Thread.currentThread();
+        System.out.println("Thread name: " + currentThread.getName());
+        System.out.println("Is daemon: " + currentThread.isDaemon()); // false!
+        
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+## 👻 스프링부트에서 데몬 스레드를 찾는다면?
+
+**실제 데몬 스레드들:**
+- **GC 스레드**: 가비지 컴렉션
+- **JVM 내부 스레드**: 클래스 로딩, JIT 컴파일러 등
+- **모니터링 스레드**: JMX, 메트릭 수집 등
+
+## 🔄 핵심 차이점
+
+| 구분 | 스프링 Executor | 데몬 스레드 |
+|------|----------------|-------------|
+| **역할** | 주요 비즈니스 로직 처리 | 보조적 작업 |
+| **생명주기** | 애플리케이션과 함께 | 사용자 스레드에 의존 |
+| **종료 방식** | 명시적 shutdown 필요 | 자동 종료 |
+| **중요도** | 핵심 기능 | 부가 기능 |
+
+## 🚀 스프링부트의 안정성
+
+```java
+// 스프링부트 종료 시
+@PreDestroy
+public void shutdown() {
+    taskExecutor.shutdown(); // 명시적으로 스레드풀 종료
+    // 데몬 스레드였다면 이런 처리가 불필요했을 것
+}
+```
+
+**스프링부트의 Executor 스레드들이 사용자 스레드인 이유:**
+- 애플리케이션 종료 시 명시적으로 shutdown 해야 함
+- graceful shutdown 과정에서 진행 중인 작업들을 완료할 시간을 줌
+- 중요한 비즈니스 로직이 중간에 끔기지 않도록 보장
+
+이게 바로 웹 애플리케이션이 안정적으로 동작할 수 있는 이유입니다! 🎆
