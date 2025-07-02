@@ -336,3 +336,96 @@ public void shutdown() {
 - 중요한 비즈니스 로직이 중간에 끔기지 않도록 보장
 
 이게 바로 웹 애플리케이션이 안정적으로 동작할 수 있는 이유입니다! 🎆
+
+---
+
+# 🏃‍♂️ 스레드 생성 - Runnable 인터페이스
+
+## 예제 코드
+
+### HelloRunnable.java
+```java
+package lesson01.start;
+
+public class HelloRunnable implements Runnable {
+    @Override
+    public void run() {
+        System.out.println("Hello Runnable : run() " + Thread.currentThread().getName());
+    }
+}
+```
+
+### HelloRunnableMain.java
+```java
+package lesson01.start;
+
+public class HelloRunnableMain {
+    public static void main(String[] args) {
+        Thread nowThread = Thread.currentThread();
+        System.out.println("main() start " + nowThread.getName());
+
+        HelloRunnable helloRunnable = new HelloRunnable();
+        Thread thread = new Thread(helloRunnable);
+        thread.start();
+
+        System.out.println("main() end " + nowThread.getName());
+    }
+}
+```
+
+## 🔄 스레드 생성 방식 비교
+
+**Runnable 인터페이스 구현 방식이 더 나은 선택입니다.**
+
+### 📊 Thread 클래스 상속 방식
+
+**장점:**
+- **간단한 구현**: Thread 클래스를 상속받아 run() 메서드만 재정의하면 됨
+
+**단점:**
+- **단일 상속의 한계**: 자바는 단일 상속만을 허용하므로 이미 다른 클래스를 상속받고 있는 경우 Thread 클래스를 상속받을 수 없음
+
+### 🏃‍♂️ Runnable 인터페이스 구현 방식
+
+**장점:**
+- **상속의 자유로움**: Runnable 인터페이스 방식은 다른 클래스를 상속받아도 문제없이 구현 가능
+- **코드의 분리**: 스레드와 실행할 작업을 분리하여 코드의 가독성 증가
+- **자원 공유**: 여러 스레드가 동일한 Runnable 객체를 공유하여 자원 관리를 효율적으로 할 수 있음
+
+**단점:**
+- **코드가 약간 복잡해질 수 있음**: Runnable 객체를 생성하고 이를 Thread에 전달하는 과정이 추가됨
+
+## 📊 비교 표
+
+| 구분 | Thread 상속 | Runnable 구현 |
+|------|-------------|----------------|
+| **구현 복잡도** | 간단 | 약간 복잡 |
+| **상속 제약** | 단일 상속 한계 | 자유로움 |
+| **코드 분리** | 어려움 | 우수 |
+| **재사용성** | 낮음 | 높음 |
+| **유지보수** | 어려움 | 우수 |
+| **추천도** | ❌ | ✅ |
+
+## 💡 실제 사용 예시
+
+```java
+// 여러 스레드가 동일한 작업을 수행
+HelloRunnable task = new HelloRunnable();
+
+Thread thread1 = new Thread(task);
+Thread thread2 = new Thread(task);
+Thread thread3 = new Thread(task);
+
+thread1.start();
+thread2.start();
+thread3.start();
+```
+
+## ✨ 결론
+
+**Runnable 인터페이스 구현 방식을 사용하는 것이 바람직합니다:**
+- 자바의 단일 상속 한계를 극복
+- 코드의 유연성과 재사용성 향상
+- 스레드와 비즈니스 로직의 명확한 분리
+- 대부분의 실무 프로젝트에서 선호되는 방식
+
